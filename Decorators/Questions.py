@@ -18,4 +18,3 @@ def custom_divisor(a,b):
 
 print(custom_divisor(5,3))
 print(custom_divisor(5,0))
-
