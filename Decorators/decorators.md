@@ -255,3 +255,86 @@ Finished in 0.0000541 sec
 ```
 
 ### Decorators With Arguments
+
+```python
+import functools
+
+def repeat(n_times):        # main decorator
+    def do_repeat(func):    # sub decorator
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for _ in range(n_times):
+                value = func(*args, **kwargs)
+            return value
+        return wrapper
+    return do_repeat
+
+# pass argument ot decorator itself
+@repeat(5)
+def printy(name):
+    print(f'Hello {name}')
+
+printy("HP")
+```
+
+### Decorators that can be used both with and without arguments
+
+```python
+def name(_func=None, *, kw1=val1, kw2=val2, ...):  # 1
+    def decorator_name(func):
+        ...  # Create and return a wrapper function.
+
+    if _func is None:
+        return decorator_name                      # 2
+    else:
+        return decorator_name(_func)               # 3
+```
+
+Here, the `_func` argument acts as a marker, **noting whether the decorator has been called with arguments or not**.
+
+1. If name has been called without arguments, the decorated function will be passed in as `_func`. If it has been called with arguments, then `_func` will be None, and some of the keyword arguments may have been changed from their default values. The `*` in the argument list means that the remaining arguments can’t be called as positional arguments.
+
+2. In this case, the decorator was called with arguments. Return a decorator function that can read and return a function.
+
+3. In this case, the decorator was called without arguments. Apply the decorator to the function immediately.
+
+If we apply this in out previoud e.g. of repeat  then it will be like
+
+```python
+import functools
+
+def repeat(_func=None, *, num_times=2):
+    def decorator_repeat(func):
+        @functools.wraps(func)
+        def wrapper_repeat(*args, **kwargs):
+            for _ in range(num_times):
+                value = func(*args, **kwargs)
+            return value
+        return wrapper_repeat
+
+    if _func is None:
+        return decorator_repeat
+    else:
+        return decorator_repeat(_func)
+
+@repeat(num_times=5)
+def printy(name):
+    print(f'Hello {name}')
+
+@repeat
+def printo(name):
+    print(f'Hi {name}')
+
+printy("HP")            # func with arg in decorator
+printo("HP")            # func without arg in decorator
+```
+
+```bash
+Hello HP
+Hello HP
+Hello HP
+Hello HP
+Hello HP
+Hi HP
+Hi HP
+```
