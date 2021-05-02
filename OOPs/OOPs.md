@@ -1,5 +1,12 @@
 # Object Oriented Programming
 
+## Key Points
+
+- Using `is` returns True only for objects that are the exact same instance.
+- A singleton is a class with only one instance.
+
+## Class Methods
+
 Result of execution of [Class Method Decorators](class_method_decorators.py)
 
 ```python
