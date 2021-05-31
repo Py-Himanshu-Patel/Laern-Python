@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 
 class Switchable(ABC):
 	@abstractmethod
@@ -9,9 +9,13 @@ class Switchable(ABC):
 	def turn_off(self):
 		pass
 
-# we can't instantiate an abstract class neither 
-# any other class which inherit abstract class and 
-# do not implement even one of its abstractmethod 
+	@abstractproperty
+	def device(self):
+		pass
+
+# we can't instantiate an abstract class neither any other 
+# class which inherit abstract class and do not implement 
+# even one of its abstractmethod or abstractproperty
 
 # s = Switchable()
 
@@ -23,6 +27,9 @@ class LightBulb(Switchable):
 	def turn_off(self):
 		print('LightBulb: turned off')
 
+	@property
+	def device(self):
+		return "Bulb"
 
 class Fan(Switchable):
 	def turn_on(self):
@@ -30,6 +37,10 @@ class Fan(Switchable):
 
 	def turn_off(self):
 		print('Fan: turn off')
+
+	@property
+	def device(self):
+		return "Fan"
 
 
 class ElectricPowerSwitch:
@@ -45,7 +56,9 @@ class ElectricPowerSwitch:
 			self.client.turn_on()
 			self.on = True
 
+b = LightBulb()
 f = Fan()
-switch = ElectricPowerSwitch(f)
+switch = ElectricPowerSwitch(b)
 switch.press()
 switch.press()
+print(switch.client.device)

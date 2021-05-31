@@ -276,7 +276,7 @@ Here `ElectricPowerSwitch` is dependent on `LightBulb` class and its methods. He
 We can have **Abstract Base Class** in python and type hints to bring this abstraction.
 
 ```python
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 
 class Switchable(ABC):
     @abstractmethod
@@ -285,6 +285,10 @@ class Switchable(ABC):
     
     @abstractmethod
     def turn_off(self):
+        pass
+
+    @abstractproperty
+    def device(self):
         pass
 
 # we can't instantiate an abstract class neither 
@@ -303,6 +307,10 @@ class LightBulb(Switchable):
 
     def turn_off(self):
         print('LightBulb: turned off')
+
+    @property
+    def device(self):
+        return "Bulb"
 
 
 class ElectricPowerSwitch:
@@ -325,6 +333,7 @@ switch.press()
 
 # LightBulb: turned on
 # LightBulb: turned off
+# Bulb
 ```
 
 Now we can pass not only `LightBulb` but any other class implemented `Switchable` class like `Fan`.
@@ -336,6 +345,10 @@ class Fan(Switchable):
 
     def turn_off(self):
         print('Fan: turn off')
+
+    @property
+    def device(self):
+        return "Fan"
 
 
 class ElectricPowerSwitch:
@@ -358,6 +371,7 @@ switch.press()
 
 # Fan: turn on
 # Fan: turn off
+# Fan
 ```
 
 ## Singleton Patterns
