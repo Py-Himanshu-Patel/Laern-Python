@@ -1,4 +1,4 @@
-from abstract_auto import AbstractAuto
+from .abstract_auto import AbstractAuto
 
 
 class Nano(AbstractAuto):
