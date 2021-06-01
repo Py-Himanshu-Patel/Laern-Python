@@ -360,3 +360,11 @@ computer_builder.build_computer()
 computer = computer_builder.get_computer()
 computer.display()
 ```
+
+## Summary
+
+- Assembly of class is seperated from components.
+- Encapsulate what varies - parts
+- Client create a director object
+- Director uses a concrete builder to complete the object
+- Builder adds parts to product
