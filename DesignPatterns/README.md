@@ -373,5 +373,3 @@ switch.press()
 # Fan: turn off
 # Fan
 ```
-
-## Singleton Patterns
