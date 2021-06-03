@@ -175,8 +175,88 @@ Marking messages as persistent doesn't fully guarantee that a message won't be l
 
 You might have noticed that the dispatching still doesn't work exactly as we want. For example in a situation with two workers, when all odd messages are heavy and even messages are light, one worker will be constantly busy and the other one will do hardly any work. Well, RabbitMQ doesn't know anything about that and will still dispatch messages evenly.
 
-In order to defeat that we can use the Channel#basic_qos channel method with the prefetch_count=1 setting. This uses the basic.qos protocol method to tell RabbitMQ not to give more than one message to a worker at a time. Or, in other words, don't dispatch a new message to a worker until it has processed and acknowledged the previous one. Instead, it will dispatch it to the next worker that is not still busy.
+This happens because RabbitMQ just dispatches a message when the message enters the queue. It doesn't look at the number of unacknowledged messages for a consumer. It just blindly dispatches every n-th message to the n-th consumer.
+
+In order to defeat that we can use the `Channel#basic_qos` channel method with the `prefetch_count=1` setting. This uses the `basic.qos` protocol method to tell RabbitMQ not to give more than one message to a worker at a time. Or, in other words, don't dispatch a new message to a worker until it has processed and acknowledged the previous one. Instead, it will dispatch it to the next worker that is not still busy.
 
 ```python
+# add it consumer before channel.basic_consume() call
 channel.basic_qos(prefetch_count=1)
+```
+
+#### Note about queue size
+
+If all the workers are busy, your queue can fill up. You will want to keep an eye on that, and maybe add more workers, or use message TTL.
+
+```python
+# new_task.py
+
+import pika
+import sys
+
+connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+channel = connection.channel()
+
+# channel.queue_declare(queue="hello")
+channel.queue_declare(queue="task_queue", durable=True)
+
+message = " ".join(sys.argv[1:]) or "Hello World!"
+# channel.basic_publish(exchange="", routing_key="hello", body=message)
+channel.basic_publish(
+    exchange="",
+    routing_key="task_queue",
+    body=message,
+    properties=pika.BasicProperties(
+        delivery_mode=2,  # make message persistent
+    ),
+)
+print(f" [x] Sent {message}")
+
+connection.close()
+```
+
+```python
+# worker.py
+
+import pika
+import sys
+import os
+import time
+
+
+def main():
+    connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+    channel = connection.channel()
+
+    # channel.queue_declare(queue="hello")
+    channel.queue_declare(queue="task_queue", durable=True)
+
+    # def callback(ch, method, properties, body):
+    #     print(" [x] Received %r" % body.decode())
+    #     time.sleep(body.count(b"."))
+    #     print(" [x] Done")
+
+    def callback(ch, method, properties, body):
+        print(" [x] Received %r" % body.decode())
+        time.sleep( body.count(b'.') )
+        print(" [x] Done")
+        ch.basic_ack(delivery_tag = method.delivery_tag)
+
+    # channel.basic_consume(queue="hello", auto_ack=True, on_message_callback=callback)
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue="task_queue", on_message_callback=callback)
+
+    print(" [*] Waiting for messages. To exit press CTRL+C")
+    channel.start_consuming()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Interrupted")
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)
 ```
