@@ -46,3 +46,5 @@ Listing queues for vhost / ...
 name    messages
 hello   3
 ```
+
+Restart RabbitMQ server to free up the queues which are no longer used.
