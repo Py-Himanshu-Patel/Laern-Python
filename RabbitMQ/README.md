@@ -7,6 +7,9 @@ RabbitMQ is a message broker: it accepts and forwards messages.
 1. [Hello World](./1-HelloWorld/README.md)
 2. [Work Queues](./2-WorkQueues/README.md)
 3. [Publisher Subscriber](./3-PublisherSubscriber/README.md)
+4. [Topic](./4-Routing/README.md)
+5. [RPC](./5-Topic/README.md)
+6. [RPC](./6-RPC/README.md)
 
 ## Notes
 

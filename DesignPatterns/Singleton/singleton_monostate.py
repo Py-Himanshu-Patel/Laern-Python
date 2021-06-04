@@ -1,7 +1,7 @@
 import datetime
 
 # it maintains a dictionary maintaining a single state for all instances
-class MonoState(object):
+class MonoState:
 	_state = {}
 
 	def __new__(cls, *args, **kwargs):
