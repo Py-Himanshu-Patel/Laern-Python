@@ -5,6 +5,8 @@ RabbitMQ is a message broker: it accepts and forwards messages.
 ## Index
 
 1. [Hello World](./1-HelloWorld/README.md)
+2. [Work Queues](./2-WorkQueues/README.md)
+3. [Publisher Subscriber](./3-PublisherSubscriber/README.md)
 
 ## Notes
 
@@ -48,3 +50,39 @@ hello   3
 ```
 
 Restart RabbitMQ server to free up the queues which are no longer used.
+
+### Listing exchanges
+
+To list the exchanges on the server you can run the ever useful `rabbitmqctl`:
+
+```bash
+sudo rabbitmqctl list_exchanges
+```
+
+```bash
+Listing exchanges for vhost / ...
+name  type
+amq.match headers
+amq.rabbitmq.trace  topic
+amq.topic   topic
+amq.fanout  fanout
+amq.headers headers
+amq.direct  direct
+    direct
+```
+
+In this list there will be some amq.* exchanges and the default (unnamed) exchange. These are created by default, but it is unlikely you'll need to use them at the moment.
+
+### Listing bindings
+
+You can list existing bindings using, you guessed it,
+
+```bash
+sudo rabbitmqctl list_bindings
+```
+
+```bash
+Listing bindings for vhost /...
+source_name	source_kind	destination_name	destination_kind	routing_key	arguments
+    exchange	task_queue	queue	task_queue	[]
+```

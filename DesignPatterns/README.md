@@ -157,7 +157,8 @@ class Lion(Animal):
 
 The `animal_leg_count` doesn’t need to know the type of Animal to return its leg count, it just calls the `leg_count` method of the Animal type because by contract a sub-class of Animal class must implement the `leg_count` function.
 
-- `I` - Interface Segregation
+### `I` - Interface Segregation
+
 - Many specific interface are better than do it all interface
 - Make fine grained interfaces that are client specific Clients should not be forced to depend upon interfaces that they do not use.
 
