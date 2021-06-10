@@ -355,6 +355,29 @@ laptop = laptop_director.get_computer()
 laptop.display()
 ```
 
+In case we need same builder to build same product with different specs we can control the building of product on our own instead of handeling it to director.
+
+```python
+AppleDesktop = DesktopBuilder()
+AppleDesktop.new_computer()
+AppleDesktop.get_case(case="Apple Case")
+AppleDesktop.install_mainboard(mainboard="Apple Mainboard", memory="Apple RAM")
+AppleDesktop.install_hard_drive(hard_drive="Apple SDD")
+AppleDesktop.install_video_card(video_card="Apple Video Card")
+apple_desk = AppleDesktop.get_computer()
+apple_desk.display()
+```
+
+```bash
+Custom Computer:
+              Case: Apple Case
+         Mainboard: Apple Mainboard
+               CPU: Intel Core i7-4770
+            Memory: Apple RAM
+        Hard drive: Apple SDD
+        Video card: Apple Video Card
+```
+
 ## Summary
 
 - Assembly of class is seperated from components.

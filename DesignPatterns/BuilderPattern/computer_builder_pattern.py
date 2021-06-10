@@ -128,3 +128,16 @@ laptop_director = Director(LaptopBuilder())
 laptop_director.build_computer()
 laptop = laptop_director.get_computer()
 laptop.display()
+
+# in case we need same builder to build same product with 
+# different specs we can control the building of product on our own
+# instead of handeling it to director
+
+AppleDesktop = DesktopBuilder()
+AppleDesktop.new_computer()
+AppleDesktop.get_case(case="Apple Case")
+AppleDesktop.install_mainboard(mainboard="Apple Mainboard", memory="Apple RAM")
+AppleDesktop.install_hard_drive(hard_drive="Apple SDD")
+AppleDesktop.install_video_card(video_card="Apple Video Card")
+apple_desk = AppleDesktop.get_computer()
+apple_desk.display()
