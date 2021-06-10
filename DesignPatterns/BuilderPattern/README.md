@@ -247,15 +247,7 @@ class AbsBuilder(ABC):
         return self._computer
 
     @abstractmethod
-    def build_mainboard(self):
-        pass
-
-    @abstractmethod
     def get_case(self):
-        pass
-
-    @abstractmethod
-    def build_mainboard(self):
         pass
 
     @abstractmethod
@@ -276,22 +268,23 @@ class AbsBuilder(ABC):
 
 class DesktopBuilder(AbsBuilder):
 
-    def get_case(self):
-        self._computer.case = 'Coolermaster N300'
+    def get_case(self, case='Coolermaster N300'):
+        self._computer.case = case
      
-    def build_mainboard(self):
-        self._computer.mainboard = 'MSI 970'
-        self._computer.cpu = 'Intel Core i7-4770'
-        self._computer.memory = 'Corsair Vengeance 16GB'
+    def install_mainboard(self, 
+                        mainboard='MSI 970',
+                        cpu='Intel Core i7-4770',
+                        memory='Corsair Vengeance 16GB'
+                    ):
+        self._computer.mainboard = mainboard
+        self._computer.cpu = cpu
+        self._computer.memory = memory
 
-    def install_mainboard(self):
-        pass
+    def install_hard_drive(self, hard_drive='Seagate 2TB'):
+        self._computer.hard_drive = hard_drive
 
-    def install_hard_drive(self):
-        self._computer.hard_drive = 'Seagate 2TB'
-
-    def install_video_card(self):
-        self._computer.video_card = 'GeForce GTX 1070'
+    def install_video_card(self, video_card='GeForce GTX 1070'):
+        self._computer.video_card = video_card
 
 
 # directory.py
@@ -304,7 +297,6 @@ class Director:
     def build_computer(self):
         self._builder.new_computer()
         self._builder.get_case()
-        self._builder.build_mainboard()
         self._builder.install_mainboard()
         self._builder.install_hard_drive()
         self._builder.install_video_card()
@@ -317,9 +309,10 @@ class Director:
 # from director import Director
 # from desktop_builder import DesktopBuilder
 
-computer_builder = Director(DesktopBuilder())
-computer_builder.build_computer()
-computer = computer_builder.get_computer()
+computer_director = Director(DesktopBuilder())
+computer_director.build_computer()
+computer = computer_director.get_computer()
+# computer here is actual object which we want to build
 computer.display()
 ```
 
@@ -332,22 +325,23 @@ Similarly if we want another product to be build then we can do it easily using 
 
 class LaptopBuilder(AbsBuilder):
 
-    def get_case(self):
-        self._computer.case = 'IN WIN BP655'
+    def get_case(self, case='IN WIN BP655'):
+        self._computer.case = case
      
-    def build_mainboard(self):
-        self._computer.mainboard = 'ASRock AM1H-ITX'
-        self._computer.cpu = 'AMD Athlon 5150'
-        self._computer.memory = 'Kingston ValueRAM 4GB'
+    def install_mainboard(self, 
+                        mainboard='ASRock AM1H-ITX',
+                        cpu='AMD Athlon 5150',
+                        memory='Kingston ValueRAM 4GB'
+                    ):
+        self._computer.mainboard = mainboard
+        self._computer.cpu = cpu
+        self._computer.memory = memory
 
-    def install_mainboard(self):
-        pass
+    def install_hard_drive(self, hard_drive='WD Blue 1TB'):
+        self._computer.hard_drive = hard_drive
 
-    def install_hard_drive(self):
-        self._computer.hard_drive = 'WD Blue 1TB'
-
-    def install_video_card(self):
-        self._computer.video_card = 'On board'
+    def install_video_card(self, video_card='On board'):
+        self._computer.video_card = video_card
 
 
 # main.py
@@ -355,10 +349,10 @@ class LaptopBuilder(AbsBuilder):
 # from director import Director
 # from laptop_builder import LaptopBuilder
 
-computer_builder = Director(LaptopBuilder())
-computer_builder.build_computer()
-computer = computer_builder.get_computer()
-computer.display()
+laptop_director = Director(LaptopBuilder())
+laptop_director.build_computer()
+laptop = laptop_director.get_computer()
+laptop.display()
 ```
 
 ## Summary

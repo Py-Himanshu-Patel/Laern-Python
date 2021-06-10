@@ -12,7 +12,7 @@ channel.queue_bind(exchange=exchange_name, queue=queue_name)
 
 A binding is a relationship between an exchange and a queue. This can be simply read as: **the queue is interested in messages from this exchange**.
 
-Bindings can take an extra r`outing_key` parameter. To avoid the confusion with a `basic_publish` parameter we're going to call it a `binding key`. This is how we could create a binding with a key:
+Bindings can take an extra `outing_key` parameter. To avoid the confusion with a `basic_publish` parameter we're going to call it a `binding key`. This is how we could create a binding with a key:
 
 ```python
 channel.queue_bind(exchange=exchange_name, queue=queue_name, routing_key='black')
