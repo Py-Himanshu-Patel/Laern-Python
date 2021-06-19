@@ -2,7 +2,7 @@
 
 ## Index
 
-1. [staticmethod classmethod and property](class_static_property\README.md)
+1. [staticmethod classmethod and property](class_static_property/README.md)
 
 ## Key Points
 
