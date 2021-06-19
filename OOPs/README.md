@@ -3,6 +3,7 @@
 ## Index
 
 1. [staticmethod classmethod and property](class_static_property/README.md)
+2. [multiple inheritance](method_resolution_order_multiple_inheritance/README.md)
 
 ## Key Points
 
