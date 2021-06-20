@@ -384,6 +384,186 @@ In this case, the items process in fractions of a second. A delay can be due to 
 
 ## Async IO’s Roots in Generators
 
+The use of `await` is a signal that marks a break point. It lets a coroutine temporarily suspend execution and permits the program to come back to it later.
+
 ### The fundamental difference between functions and generators
 
-A function is all-or-nothing. Once it starts, it won’t stop until it hits a return, then pushes that value to the caller (the function that calls it). A generator, on the other hand, pauses each time it hits a yield and goes no further. Not only can it push this value to calling stack, but it can keep a hold of its local variables when you resume it by calling next() on it.
+A function is all-or-nothing. Once it starts, it won’t stop until it hits a return, then pushes that value to the caller (the function that calls it). A generator, on the other hand, pauses each time it hits a `yield` and goes no further. Not only can it push this value to calling stack, but it can keep a hold of its local variables when you resume it by calling `next()` on it.
+
+## The Event Loop and `asyncio.run()`
+
+You can think of an event loop as something like a `while True` loop that monitors coroutines, taking feedback on what’s idle, and looking around for things that can be executed in the meantime. It is able to wake up an idle coroutine when whatever that coroutine is waiting on becomes available.
+
+The entire management of the event loop has been implicitly handled by one function call:
+
+```python
+asyncio.run(main())  # Python 3.7+
+```
+
+`asyncio.run()`, introduced in Python 3.7, is responsible for getting the event loop, running tasks until they are marked as complete, and then closing the event loop.
+
+1. Coroutines don’t do much on their own until they are tied to the event loop. If you have a main coroutine that awaits others, simply calling it in isolation has little effect:
+
+    ```python
+    import asyncio
+
+    async def main():
+        print("Hello")
+        await asyncio.sleep(1)
+        print("World")
+
+    routine = main()
+    routine
+    ```
+
+    Remember to use asyncio.run() to actually force execution by scheduling the main() coroutine (future object) for execution on the event loop:
+
+    ```python
+    >>> asyncio.run(routine)
+    Hello ...
+    World!
+    ```
+
+    (Other coroutines can be executed with `await`. It is typical to wrap just `main()` in `asyncio.run()`, and chained coroutines with await will be called from there.)
+
+2. By default, an async IO event loop runs in a single thread and on a single CPU core. Usually, running one single-threaded event loop in one CPU core is more than sufficient. It is also possible to run event loops across multiple cores but not stable though.
+
+3. Event loops are pluggable. That is, you could, if you really wanted, write your own event loop implementation and have it run tasks just the same. That is what is meant by the term “pluggable event loop”: you can use any working implementation of an event loop, unrelated to the structure of the coroutines themselves.
+
+## Async IO in Context
+
+1. Simply putting async before every function is a bad idea if all of the functions use blocking calls. (This can actually slow down your code.). Like `sockets` or `time.sleep`.
+2. Threading also tends to scale less elegantly than async IO, because threads are a system resource with a finite availability. Creating thousands of threads will fail on many machines. Creating thousands of async IO tasks is completely feasible.
+3. Async code do not create thread at background. Everything happend in just one thread (Event Loop) as we rapidly alternated the functions/coroutines which are waiting (awaited) for some result will be suspended and the one who are ready will be executed in current Event Loop. This save us from compelication of multi threading and multiprocessing. The `await` line in a coroutine hand over the controlls from coroutine executing to the event loop which can then execute the next productive coroutine.
+4. The biggest reason not to use it is that await only supports a specific set of objects that define a specific set of methods. If you want to do async read operations with a certain DBMS, you’ll need to find not just a Python wrapper for that DBMS, but one that supports the async/await syntax. Coroutines that contain synchronous calls block other coroutines and tasks from running.
+
+## Other Top-Level asyncio Functions
+
+### `create_task()`
+
+You can use `create_task()` to schedule the execution of a coroutine object, followed by `asyncio.run()`:
+
+```python
+import asyncio
+
+async def coroutine(lst):
+    ''' IO wait time is proportional to max element in list '''
+    await asyncio.sleep(max(lst))
+    return list(reversed(lst))
+
+
+async def main():
+    lst = [1, 2, 3]
+    task = asyncio.create_task(coroutine(lst))
+    # await let asyncio.run(main()) know about all the coroutines
+    # included in the main() coroutines, basically a linking bw main 
+    # and sub coroutines
+    result = await task
+
+    print("result : ", result) 
+    print("Type : ", type(task)) 
+    print("Done : ", task.done())
+
+t = asyncio.run(main())
+```
+
+```bash
+result :  [3, 2, 1]
+Type :  <class '_asyncio.Task'>
+Done :  True
+```
+
+Lets see what happens when we remove await from task
+
+```python
+import asyncio
+
+async def coroutine(lst):
+    ''' IO wait time is proportional to max element in list '''
+    await asyncio.sleep(max(lst))
+    return list(reversed(lst))
+
+
+async def main():
+    lst = [1, 2, 3]
+    task = asyncio.create_task(coroutine(lst))
+    # result = await task
+
+    # print("result : ", result) 
+    print("Type : ", type(task))
+    print("Done : ", task.done())
+
+t = asyncio.run(main())
+```
+
+```bash
+Type :  <class '_asyncio.Task'>
+Done :  False
+```
+
+The coroutine `main()` gets completed successfully without fail/error but since the `task` coroutine/task was not coupled/awaited then `main()` gets finished without waiting for `task` to get completed. But in case `main()` wait for some other reason then we see `create_task()` had already put the coroutine in event loop and it gets executed after some time as we see Done as True.
+
+```python
+import asyncio
+
+async def coroutine(lst):
+    ''' IO wait time is proportional to max element in list '''
+    return list(reversed(lst))
+
+
+async def main():
+    lst = [1, 2, 3]
+    task = asyncio.create_task(coroutine(lst))
+
+    await asyncio.sleep(1)
+    print("Type : ", type(task))
+    print("Done : ", task.done())
+
+t = asyncio.run(main())
+```
+
+```bash
+Type :  <class '_asyncio.Task'>
+Done :  True
+```
+
+Because `asyncio.run(main())` calls `loop.run_until_complete(main())`, the event loop is only concerned (without `await t` present) that `main()` is done, not that the tasks that get created within `main()` are done. Without `await t`, the loop’s other tasks will be cancelled, possibly before they are completed. If you need to get a list of currently pending tasks, you can use `asyncio.Task.all_tasks()`.
+
+### gather()
+
+`gather()` is meant to neatly put a collection of coroutines (futures) into a single future. As a result, it returns a single future object, and, if you `await asyncio.gather()` and specify multiple tasks or coroutines, you’re waiting for all of them to be completed. (This somewhat parallels `queue.join()` from our earlier example.) The result of `gather()` will be a list of the results across the inputs:
+
+```python
+import asyncio
+import time
+
+async def coroutine(lst):
+    ''' IO wait time is proportional to max element in list '''
+    await asyncio.sleep(max(lst))
+    return list(reversed(lst))
+
+
+async def main():
+    lst = [-3, -1, 1]
+    task1 = asyncio.create_task(coroutine(lst))
+    lst = [-1, 0, 1]
+    task2 = asyncio.create_task(coroutine(lst))
+
+    start = time.perf_counter()
+    result = await asyncio.gather(task1, task2)
+    end = time.perf_counter()
+    print(f"Both tasks done: {all([task1.done(), task2.done()])}")
+    print(f"Time taken: {(end - start):0.5f} seconds")
+    return result
+
+res = asyncio.run(main())
+print(res)
+```
+
+```bash
+Both tasks done: True
+Time taken: 1.00492 seconds
+[[1, -1, -3], [1, 0, -1]]
+```
+
+Noticed that `gather()` waits on the entire result set of the Futures or coroutines that you pass it. Alternatively, you can loop over `asyncio.as_completed()` to get tasks as they are completed, in the order of completion.
