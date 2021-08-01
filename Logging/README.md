@@ -135,8 +135,9 @@ For more format refer [Python Logger Documentation](https://docs.python.org/3/li
 
 ## Logging with different files
 
-Till now we have logged only one module. Lets check how to log different modules.
-Here we put a logger for a class and log the object creation.
+Till now we have logged only one module. Lets check how to log different modules. Here we put a logger for a class and log the object creation.
+
+### Single Logger instaces
 
 ```python
 # employee.py
@@ -193,6 +194,8 @@ if __name__ == "__main__":
 2021-08-02 00:10:02,707:INFO:root:Employee Created : John Doe
 ```
 
+### Multiple Logger instaces
+
 Now lets use seperate logger for each module so that we can configure them seperately. See the name of method logger getting logged as 
 
 ```python
@@ -202,11 +205,16 @@ import logging
 # equals employee.py when exe from another module
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    filename='logger.log', 
-    level=logging.DEBUG,
-    format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
-)
+# set level of logger instance
+logger.setLevel(logging.INFO)
+# set a format for logs
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+# make a file handler 
+file_handler = logging.FileHandler('employee.log')
+# add formatter to file handler
+file_handler.setFormatter(formatter)
+# add formatter to logger
+logger.addHandler(file_handler)
 
 
 class Employee:
@@ -231,13 +239,150 @@ if __name__ == "__main__":
 When called from `employee.py`
 
 ```bash
+# employee.log
 2021-08-02 00:22:51,370:INFO:__main__:Employee Created : Jane Stuart
 ```
 
-When called from `main_method.py`
+When run from main method
 
-```bash
-2021-08-02 00:22:42,897:INFO:employee:Employee Created : John Doe
+```python
+# main_method.py
+import logging
+import employee
+
+logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+file_handler = logging.FileHandler('employee.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+
+if __name__ == "__main__":
+    e1 = employee.Employee("John", "Doe")
+    logger.info("Log of main_method.py")
 ```
 
-See the logger name is `__main__` and `employee` based on `__name__` value.
+```bash
+# employee.log
+2021-08-02 01:17:50,932:INFO:employee:Employee Created : John Doe
+```
+
+```bash
+# logger.log
+2021-08-02 01:17:50,933:INFO:__main__:Log of main_method.py
+```
+
+## Traceback in Logger
+
+```python
+# traceback_log.py
+import logging
+
+logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+file_handler = logging.FileHandler('traceback.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+
+def divison(num, den):
+    try:
+        result = num / den
+    except ZeroDivisionError:
+        logger.exception("Divison By Zero")
+    else:
+        return result
+
+
+print(divison(5,2))
+print(divison(5,0))
+```
+
+```bash
+# console
+2.5
+None
+```
+
+```bash
+# traceback.log
+2021-08-02 01:24:31,543:ERROR:__main__:Divison By Zero
+Traceback (most recent call last):
+  File "/home/himanshu/HP/dev/Learn-Python/Logging/traceback_log.py", line 14, in divison
+    result = num / den
+ZeroDivisionError: division by zero
+```
+
+## Handel different level of log in different file or console
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# set this logger to catch all log for DEBUG and above
+# we can set level on seperate file handler as well but in case 
+# logger is set to level of INFO then even the file handler 
+# registered with this logger won't log the records below INFO (like DEBUG)
+logger.setLevel(logging.DEBUG)
+
+# formatter for logs
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+
+# file handler for ERROR level log
+# mention the filename where we want to send the logs
+file_handler = logging.FileHandler('traceback.log')
+file_handler.setLevel(logging.ERROR)
+file_handler.setFormatter(formatter)
+
+# stream handler for DEBUG level log
+# no parameter means logs send to console
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+# add all file or stream handler
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+
+def divison(num, den):
+    try:
+        result = num / den
+    except ZeroDivisionError:
+        logger.exception("Divison By Zero")
+    else:
+        return result
+
+logger.debug("This goes to debug log")
+logger.debug(f"{divison(5,2)}")
+logger.debug(f"{divison(5,0)}")
+```
+
+We are able to see the logs on console and stack trace as well since the logger is set to catch all logs for DEBUG and above.
+
+```bash
+# console
+2021-08-02 02:11:00,844:DEBUG:__main__:This goes to debug log
+2021-08-02 02:11:00,844:DEBUG:__main__:2.5
+2021-08-02 02:11:00,844:ERROR:__main__:Divison By Zero
+Traceback (most recent call last):
+  File "/home/himanshu/HP/dev/Learn-Python/Logging/traceback_log.py", line 32, in divison
+    result = num / den
+ZeroDivisionError: division by zero
+2021-08-02 02:11:00,845:DEBUG:__main__:None
+```
+
+The ERROR gets noted in log as well.
+
+```bash
+# traceback.log
+2021-08-02 02:11:00,844:ERROR:__main__:Divison By Zero
+Traceback (most recent call last):
+  File "/home/himanshu/HP/dev/Learn-Python/Logging/traceback_log.py", line 32, in divison
+    result = num / den
+ZeroDivisionError: division by zero
+```
