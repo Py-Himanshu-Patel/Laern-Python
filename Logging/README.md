@@ -1,5 +1,7 @@
 # Python Logger
 
+Thanks to [Corey Schafers - Python Tutorial: Logging Advanced](https://www.youtube.com/watch?v=jxmzY9soFXg&list=PLKrrYuFe8YTHrcgDKeHV4XAnkcIEAkEWs&index=40&ab_channel=CoreySchafer)
+
 ## Default Logger
 
 Level | When it’s used
@@ -108,7 +110,7 @@ import logging
 # logging to file with Time:LogLevel:Message format
 # for more format https://docs.python.org/3/library/logging.html#formatter-objects
 logging.basicConfig(
-    filename='example.log', 
+    filename='example.log',
     level=logging.DEBUG,
     format='%(asctime)s:%(levelname)s:%(message)s'
 )
@@ -130,3 +132,112 @@ logging.error('This is error log')
 ```
 
 For more format refer [Python Logger Documentation](https://docs.python.org/3/library/logging.html#formatter-objects)
+
+## Logging with different files
+
+Till now we have logged only one module. Lets check how to log different modules.
+Here we put a logger for a class and log the object creation.
+
+```python
+# employee.py
+
+import logging
+
+logging.basicConfig(
+    filename='logger.log', 
+    level=logging.DEBUG,
+    format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+)
+
+
+class Employee:
+    def __init__(self, first_name, last_name) -> None:
+        self.first_name = first_name
+        self.last_name = last_name
+
+        # update from logging lib to logger instance
+        logging.info(f"Employee Created : {self.get_name()}")
+
+    def get_email(self):
+        return f"{self.first_name}.{self.last_name}@company.com"
+
+    def get_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+if __name__ == "__main__":
+    e1 = Employee('Jane','Stuart')
+```
+
+```bash
+# logger.log
+2021-08-02 00:08:36,834:INFO:root:Employee Created : Jane Stuart
+```
+
+Now what if we run this file from a different module. Lets creat another module which actually call this class. A note here even though we imported the `employee` module in `main_method` module when we execute the code the execution goes to `employee` module as well there it find the configuration of logger and hence the file which get logged is `employee.py` and not `main_method.py` one.
+
+```python
+import logging
+import employee
+
+logging.basicConfig(
+    filename='logger.log', 
+    level=logging.DEBUG,
+    format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+)
+
+if __name__ == "__main__":
+    e1 = employee.Employee("John", "Doe")
+```
+
+```bash
+2021-08-02 00:10:02,707:INFO:root:Employee Created : John Doe
+```
+
+Now lets use seperate logger for each module so that we can configure them seperately. See the name of method logger getting logged as 
+
+```python
+import logging
+
+# name is a string : equals __main__ when we exe this file and 
+# equals employee.py when exe from another module
+logger = logging.getLogger(__name__)
+
+logging.basicConfig(
+    filename='logger.log', 
+    level=logging.DEBUG,
+    format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+)
+
+
+class Employee:
+    def __init__(self, first_name, last_name) -> None:
+        self.first_name = first_name
+        self.last_name = last_name
+
+        # update from logging lib to logger instance
+        logger.info(f"Employee Created : {self.get_name()}")
+
+    def get_email(self):
+        return f"{self.first_name}.{self.last_name}@company.com"
+
+    def get_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+
+if __name__ == "__main__":
+    e1 = Employee('Jane','Stuart')
+```
+
+When called from `employee.py`
+
+```bash
+2021-08-02 00:22:51,370:INFO:__main__:Employee Created : Jane Stuart
+```
+
+When called from `main_method.py`
+
+```bash
+2021-08-02 00:22:42,897:INFO:employee:Employee Created : John Doe
+```
+
+See the logger name is `__main__` and `employee` based on `__name__` value.
