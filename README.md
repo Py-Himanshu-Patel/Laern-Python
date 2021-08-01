@@ -12,3 +12,4 @@ Learn advanced concept of Python 3
   3.3 [Factory Pattern](./DesignPatterns/FactoryPattern/README.md)  
   3.4 [Proxy Pattern](./DesignPatterns/ProxyPattern/README.md)  
 4. [Rabbit MQ](./RabbitMQ/README.md)
+5. [Logging](Logging/README.md)
