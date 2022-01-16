@@ -346,3 +346,187 @@ Remember that threads are scheduled by the operating system so, even though all 
 One use for a Barrier is to allow a pool of threads to initialize themselves. Having the threads wait on a Barrier after they are initialized will ensure that none of the threads start running before all of the threads are finished with their initialization.
 
 ### Producer-Consumer Threading
+
+#### Producer-Consumer : Lock
+
+```python
+import concurrent.futures
+import random
+import threading
+import logging
+from unittest.mock import sentinel
+
+SENTINEL = object()
+
+class Pipeline:
+	"""
+	Class to allow a single element pipeline between producer and consumer.
+	"""
+	def __init__(self):
+		self.message = 0
+		self.producer_lock = threading.Lock()
+		self.consumer_lock = threading.Lock()
+		self.consumer_lock.acquire()
+
+	def get_message(self, name):
+		logging.debug("%s:about to acquire getlock", name)
+		self.consumer_lock.acquire()
+		logging.debug("%s:have getlock", name)
+		message = self.message
+		logging.debug("%s:about to release setlock", name)
+		self.producer_lock.release()
+		logging.debug("%s:setlock released", name)
+		return message
+
+	def set_message(self, message, name):
+		logging.debug("%s:about to acquire setlock", name)
+		self.producer_lock.acquire()
+		logging.debug("%s:have setlock", name)
+		self.message = message
+		logging.debug("%s:about to release getlock", name)
+		self.consumer_lock.release()
+		logging.debug("%s:getlock released", name)
+
+def producer(pipeline):
+	"""
+	pretend we are getting a message from network
+	"""
+	for _ in range(10):
+		message = random.randint(1,101)
+		logging.info("Producer got message: %s", message)	
+		pipeline.set_message(message, "Producer")
+
+	pipeline.set_message(SENTINEL, "Producer")
+
+def consumer(pipeline):
+	"""
+	Pretend we are saving number in DB
+	"""
+	message = 0
+	while message is not SENTINEL:
+		message = pipeline.get_message("Consumer")
+		if message is not SENTINEL:
+			logging.info("Consumer storing message: %s", message)
+
+
+if __name__ == "__main__":
+	format = "%(asctime)s: %(message)s"
+	logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+	# logging.getLogger().setLevel(logging.DEBUG)
+
+	pipeline = Pipeline()
+	with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+		executor.submit(producer, pipeline)
+		executor.submit(consumer, pipeline)
+```
+```bash
+02:50:40: Producer got message: 10
+02:50:40: Producer got message: 5
+02:50:40: Consumer storing message: 10
+02:50:40: Producer got message: 75
+02:50:40: Consumer storing message: 5
+02:50:40: Consumer storing message: 75
+02:50:40: Producer got message: 28
+02:50:40: Producer got message: 18
+02:50:40: Consumer storing message: 28
+02:50:40: Producer got message: 38
+02:50:40: Consumer storing message: 18
+02:50:40: Consumer storing message: 38
+02:50:40: Producer got message: 83
+02:50:40: Producer got message: 54
+02:50:40: Consumer storing message: 83
+02:50:40: Producer got message: 4
+02:50:40: Producer got message: 19
+02:50:40: Consumer storing message: 54
+02:50:40: Consumer storing message: 4
+02:50:40: Consumer storing message: 19
+```
+
+- message stores the message to pass.
+- `producer_lock` is a threading.Lock object that restricts access to the message by the producer thread.
+- `consumer_lock` is also a threading.Lock that restricts access to the message by the consumer thread.
+
+As soon as the consumer calls `.producer_lock.release()`, it can be swapped out, and the producer can start running. That could happen before `.release()` returns! This means that there is a slight possibility that when the function returns self.message, that could actually be the next message generated, so you would lose the first message. This is another example of a race condition.
+
+The operating system can swap threads at any time, but it generally lets each thread have a reasonable amount of time to run before swapping it out. That’s why the producer usually runs until it blocks in the second call to `.set_message()`.
+
+While it works for this limited test, it is not a great solution to the producer-consumer problem in general because it only allows a single value in the pipeline at a time. When the producer gets a burst of messages, it will have nowhere to put them.
+
+Let’s move on to a better way to solve this problem, using a Queue.
+
+#### Producer-Consumer : Queue
+
+Let’s start with the **Event**. The `threading.Event` object allows one thread to signal an event while many other threads can be waiting for that event to happen. The key usage in this code is that the threads that are waiting for the event do not necessarily need to stop what they are doing, they can just check the status of the Event every once in a while.
+
+```python
+from queue import Queue
+import random
+import threading
+import concurrent.futures
+import logging
+import time
+
+def producer(queue, event):
+	while not event.is_set():
+		message = random.randint(1,101)
+		logging.info("Producer got message: %s (size=%d)", message, queue.qsize())
+		queue.put(message)
+	logging.info("Producer receive event: Exiting")
+
+def consumer(queue, event):
+	while not event.is_set() or not queue.empty():
+		message = queue.get()
+		logging.info("Consumer storing message: %s (size=%d)", message, queue.qsize())
+	logging.info("Consumer received event: Exiting")
+
+
+if __name__ == "__main__":
+	format = "%(asctime)s: %(message)s"
+	logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+	
+	pipeline = Queue(maxsize=10)
+	event = threading.Event()
+	with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+		executor.submit(producer, pipeline, event)
+		executor.submit(consumer, pipeline, event)
+
+		time.sleep(0.01)
+		logging.info("Main: about to set event")
+		event.set()
+```
+
+```bash
+16:03:11: Producer got message: 33 (size=0)
+16:03:11: Producer got message: 72 (size=1)
+16:03:11: Producer got message: 1 (size=2)
+16:03:11: Producer got message: 69 (size=3)
+16:03:11: Producer got message: 11 (size=4)
+16:03:11: Producer got message: 75 (size=5)
+16:03:11: Producer got message: 27 (size=6)
+16:03:11: Producer got message: 65 (size=7)
+16:03:11: Producer got message: 40 (size=8)
+16:03:11: Producer got message: 15 (size=9)
+16:03:11: Producer got message: 79 (size=10)
+16:03:11: Consumer storing message: 33 (size=9)
+16:03:11: Consumer storing message: 72 (size=8)
+16:03:11: Consumer storing message: 1 (size=7)
+16:03:11: Consumer storing message: 69 (size=6)
+16:03:11: Consumer storing message: 11 (size=5)
+16:03:11: Consumer storing message: 75 (size=4)
+16:03:11: Consumer storing message: 27 (size=3)
+...
+16:03:11: Consumer storing message: 11 (size=0)
+16:03:11: Main: about to set event
+16:03:11: Producer got message: 48 (size=4)
+16:03:11: Producer receive event: Exiting
+16:03:11: Consumer storing message: 48 (size=0)
+16:03:11: Consumer received event: Exiting
+```
+
+Let’s start with the `Event`. The `threading.Event` object allows one thread to signal an event while many other threads can be waiting for that event to happen. The key usage in this code is that the threads that are waiting for the event do not necessarily need to stop what they are doing, they can just check the status of the Event every once in a while.
+
+In this example, the main thread will simply sleep for a while and then `.set()` event. This set of event tells producer to stop producing and consumer to stop worring about new message comming into queue and just finish the remaing ones.
+
+If you give a positive number for `maxsize`, it will limit the queue to that number of elements, causing `.put()` to block until there are fewer than `maxsize` elements. If you don’t specify `maxsize`, then the queue will grow to the limits of your computer’s memory.
+
+The core devs who wrote the standard library knew that a `Queue` is frequently used in multi-threading environments and incorporated all of that locking code inside the Queue itself. **Queue is thread-safe**.
